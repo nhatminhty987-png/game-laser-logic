@@ -69,3 +69,27 @@ select:hover, button:hover {
 button:active {
     transform: scale(0.96);
 }
+/* Định dạng cho các nút chuyển màn ◀ và ▶ */
+#prevBtn, #nextBtn {
+    padding: 8px 14px;
+    font-size: 16px;
+    font-weight: bold;
+    background-color: #313244;
+    color: #cdd6f4;
+    border: 1px solid #45475a;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+#prevBtn:hover:not(:disabled), #nextBtn:hover:not(:disabled) {
+    background-color: #89b4fa;
+    color: #11111b;
+}
+
+/* Kiểu dáng khi nút bị khóa (Chưa mở màn tiếp theo) */
+#prevBtn:disabled, #nextBtn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    border-color: #313244;
+}
