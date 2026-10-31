@@ -6,8 +6,10 @@ const levelTitle = document.getElementById('levelTitle');
 const levelSelect = document.getElementById('levelSelect');
 const resetBtn = document.getElementById('resetBtn');
 const clearDataBtn = document.getElementById('clearDataBtn');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
 
-// Đổ dữ liệu màn chơi vào Menu Dropdown dựa trên tiến trình đã lưu
+// Đổ dữ liệu vào Dropdown & Cập nhật trạng thái các nút chuyển màn
 function initLevelDropdown() {
     levelSelect.innerHTML = '';
     const unlockedIndex = getUnlockedLevelIndex();
@@ -23,16 +25,21 @@ function initLevelDropdown() {
         }
         levelSelect.appendChild(option);
     });
+
+    // Cập nhật trạng thái bật/tắt nút Lùi & Tiến
+    prevBtn.disabled = currentLevelIndex === 0;
+    // Nút Next chỉ bấm được nếu màn tiếp theo đã được mở khóa
+    nextBtn.disabled = currentLevelIndex >= unlockedIndex || currentLevelIndex >= LEVELS.length - 1;
 }
 
-// Hàm vẽ và cập nhật khung hình chính (Main Render Loop)
+// Hàm render chính
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     levelTitle.innerText = getCurrentLevel().name;
     levelSelect.value = currentLevelIndex;
 
-    // 1. Vẽ ô và môi trường trên bàn cờ
+    // 1. Vẽ ô bàn cờ
     for (let r = 0; r < GRID_SIZE; r++) {
         for (let c = 0; c < GRID_SIZE; c++) {
             ctx.strokeStyle = '#313244';
@@ -68,23 +75,26 @@ function draw() {
         }
     }
 
-    // 2. Vẽ tia Laser (Hàm nằm trong laserAnimator.js)
+    // 2. Vẽ tia Laser
     drawLaserPath();
 
-    // 3. Cập nhật và vẽ các hạt pháo hoa nếu có (Hàm nằm trong confetti.js)
+    // 3. Vẽ pháo hoa
     updateAndDrawConfetti(ctx);
 
-    // 4. Vòng lặp bắn tia laser và xử lý chiến thắng
+    // 4. Vòng lặp laser & điều kiện thắng
     if (laserProgress < maxLaserLength) {
         laserProgress += 12;
         animationFrameId = requestAnimationFrame(draw);
     } else {
         if (targetHit) {
-            // Bắn pháo hoa 1 lần tại vị trí ô Mục tiêu khi tia vừa chạm tới
             if (particles.length === 0) {
                 playWinSound();
                 let targetCell = laserWaypoints[laserWaypoints.length - 1];
                 createConfetti(targetCell.x, targetCell.y, 80);
+                
+                // Mở khóa màn tiếp theo khi thắng
+                saveUnlockedLevel(currentLevelIndex + 1);
+                initLevelDropdown();
             }
 
             ctx.fillStyle = '#a6e3a1';
@@ -92,25 +102,17 @@ function draw() {
             if (currentLevelIndex === LEVELS.length - 1) {
                 ctx.fillText("XONG TOÀN BỘ GAME!", 80, 35);
             } else {
-                ctx.fillText("THẮNG! Đang qua màn...", 80, 35);
-                setTimeout(() => {
-                    if (nextLevel()) {
-                        clearConfetti();
-                        initLevelDropdown();
-                        triggerLaserAnimation();
-                    }
-                }, 1500);
+                ctx.fillText("THẮNG! Bấm ▶ để sang màn", 60, 35);
             }
         }
         
-        // Tiếp tục animation loop nếu pháo hoa vẫn đang rơi
         if (particles.length > 0) {
             animationFrameId = requestAnimationFrame(draw);
         }
     }
 }
 
-// Bắt các sự kiện tương tác người dùng
+// Bắt sự kiện người dùng
 canvas.addEventListener('click', (e) => {
     if (targetHit && currentLevelIndex === LEVELS.length - 1 && laserProgress >= maxLaserLength) return;
 
@@ -125,6 +127,24 @@ canvas.addEventListener('click', (e) => {
     triggerLaserAnimation();
 });
 
+// Sự kiện bấm nút Màn trước ◀
+prevBtn.addEventListener('click', () => {
+    if (prevLevel()) {
+        clearConfetti();
+        initLevelDropdown();
+        triggerLaserAnimation();
+    }
+});
+
+// Sự kiện bấm nút Màn tiếp theo ▶
+nextBtn.addEventListener('click', () => {
+    if (nextLevel()) {
+        clearConfetti();
+        initLevelDropdown();
+        triggerLaserAnimation();
+    }
+});
+
 resetBtn.addEventListener('click', () => {
     loadCurrentLevel();
     clearConfetti();
@@ -135,6 +155,7 @@ levelSelect.addEventListener('change', (e) => {
     currentLevelIndex = parseInt(e.target.value, 10);
     loadCurrentLevel();
     clearConfetti();
+    initLevelDropdown();
     triggerLaserAnimation();
 });
 
