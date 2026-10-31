@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laser Logic Puzzle</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="game-container">
+        <h1 id="levelTitle">Laser Logic Puzzle</h1>
+        
+        <div class="controls">
+            <select id="levelSelect"></select>
+            <button id="resetBtn">🔄 Chơi lại</button>
+            <button id="clearDataBtn" class="btn-danger">🗑️ Xóa dữ liệu</button>
+        </div>
+
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+        
+        <div class="instructions">
+            <p><strong>Cách chơi:</strong> Click vào các ô gương <b>/</b> hoặc <b>\</b> để xoay hướng phản xạ laser sao cho tia chạm vào MỤC TIÊU (ô tròn).</p>
+        </div>
+    </div>
+
+    <!-- Nạp đầy đủ 6 file JS theo đúng thứ tự -->
+    <script src="grid.js"></script>
+    <script src="levelManager.js"></script>
+    <script src="audioManager.js"></script>
+    <script src="laserAnimator.js"></script>
+    <script src="confetti.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
