@@ -132,3 +132,12 @@ function nextLevel() {
     }
     return false;
 }
+// Chuyển về màn phía trước
+function prevLevel() {
+    if (currentLevelIndex > 0) {
+        currentLevelIndex--;
+        loadCurrentLevel();
+        return true;
+    }
+    return false;
+}
