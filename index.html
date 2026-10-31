@@ -5,14 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Laser Logic Puzzle</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#89b4fa">
 </head>
 <body>
 
     <div class="game-container">
         <h1 id="levelTitle">Laser Logic Puzzle</h1>
         
+        <!-- Thanh điều khiển với nút chuyển màn Trước / Sau -->
         <div class="controls">
+            <button id="prevBtn" title="Màn trước">◀</button>
             <select id="levelSelect"></select>
+            <button id="nextBtn" title="Màn tiếp theo">▶</button>
             <button id="resetBtn">🔄 Chơi lại</button>
             <button id="clearDataBtn" class="btn-danger">🗑️ Xóa dữ liệu</button>
         </div>
@@ -24,12 +29,20 @@
         </div>
     </div>
 
-    <!-- Nạp đầy đủ 6 file JS theo đúng thứ tự -->
+    <!-- Nạp toàn bộ script theo đúng thứ tự -->
     <script src="grid.js"></script>
     <script src="levelManager.js"></script>
     <script src="audioManager.js"></script>
     <script src="laserAnimator.js"></script>
     <script src="confetti.js"></script>
     <script src="game.js"></script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js');
+            });
+        }
+    </script>
 </body>
 </html>
