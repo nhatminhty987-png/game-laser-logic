@@ -1,12 +1,10 @@
 const STORAGE_KEY = "laser_logic_unlocked_level";
 
-// Lấy chỉ số màn chơi cao nhất đã mở khóa từ LocalStorage
 function getUnlockedLevelIndex() {
     const saved = localStorage.getItem(STORAGE_KEY);
     return saved !== null ? parseInt(saved, 10) : 0;
 }
 
-// Lưu màn chơi mở khóa mới
 function saveUnlockedLevel(index) {
     const currentUnlocked = getUnlockedLevelIndex();
     if (index > currentUnlocked) {
@@ -14,88 +12,70 @@ function saveUnlockedLevel(index) {
     }
 }
 
-// Xóa dữ liệu lưu tiến trình
 function clearSaveData() {
     localStorage.removeItem(STORAGE_KEY);
     currentLevelIndex = 0;
     loadCurrentLevel();
 }
 
-// Thuật toán sinh màn chơi ngẫu nhiên đảm bảo 100% có thể giải được
+// Thuật toán sinh màn chuẩn 100% giải được
 function generateSolvableLevel(id) {
-    // Tạo lưới rỗng 5x5
     const grid = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill('E'));
-    
-    // Nguồn L cố định ở ô (0,0)
+    grid[0][0] = 'L'; // Nguồn cố định ở (0,0)
+
     let curX = 0, curY = 0;
-    grid[curY][curX] = 'L';
-    
     let dir = 0; // Hướng ban đầu: 0 (Phải)
     
-    // Số lượng gương tăng dần theo Level (Level 1: 1-2 gương, Level cao: 3-5 gương)
-    const targetMirrors = Math.min(1 + Math.floor(id / 15), 5);
+    // Số lượng gương theo độ khó màn
+    const numMirrors = Math.min(2 + Math.floor(id / 10), 6);
     let mirrorsPlaced = 0;
 
-    // Giả lập đường đi tạo lời giải chuẩn
-    while (mirrorsPlaced < targetMirrors) {
-        // Đi ngẫu nhiên từ 1 đến 3 ô theo hướng hiện tại
-        let steps = Math.floor(Math.random() * 3) + 1;
-        let nextX = curX + DX[dir] * steps;
-        let nextY = curY + DY[dir] * steps;
+    for (let attempt = 0; attempt < 50 && mirrorsPlaced < numMirrors; attempt++) {
+        // Đi từ 1-3 bước
+        let step = Math.floor(Math.random() * 3) + 1;
+        let nextX = curX + DX[dir] * step;
+        let nextY = curY + DY[dir] * step;
 
-        // Nếu vượt ngoài bàn cờ thì giới hạn lại ở mép bàn cờ
+        // Nếu ra ngoài mép bàn cờ -> dừng lại tại mép
         if (nextX < 0 || nextX >= GRID_SIZE || nextY < 0 || nextY >= GRID_SIZE) {
             nextX = Math.min(Math.max(nextX, 0), GRID_SIZE - 1);
             nextY = Math.min(Math.max(nextY, 0), GRID_SIZE - 1);
         }
 
-        // Nếu tiến được đến vị trí mới khác vị trí cũ
-        if (nextX !== curX || nextY !== curY) {
+        // Đặt gương tại điểm đổi hướng (tránh ô 0,0)
+        if ((nextX !== curX || nextY !== curY) && grid[nextY][nextX] === 'E') {
             curX = nextX;
             curY = nextY;
 
-            // Đặt gương tại vị trí này để đổi hướng (tránh đặt đè lên nguồn 'L')
-            if (grid[curY][curX] === 'E') {
-                // Chọn ngẫu nhiên hướng rẽ mới (Trái hoặc Phải)
-                let turnLeft = Math.random() < 0.5;
-                let newDir = turnLeft ? (dir + 3) % 4 : (dir + 1) % 4;
-
-                // Xác định loại gương tương ứng (/ hoặc \)
-                let mirrorType = '/';
-                if ((dir === 0 && newDir === 1) || (dir === 2 && newDir === 3) || 
-                    (dir === 1 && newDir === 0) || (dir === 3 && newDir === 2)) {
-                    mirrorType = '\\';
-                }
-
-                grid[curY][curX] = mirrorType;
-                dir = newDir;
-                mirrorsPlaced++;
+            let newDir = (dir + (Math.random() < 0.5 ? 1 : 3)) % 4; // Rẽ trái hoặc phải
+            
+            // Xกำหนด loại gương dựa trên hướng rẽ
+            let mirrorType = '/';
+            if ((dir === 0 && newDir === 1) || (dir === 2 && newDir === 3) || 
+                (dir === 1 && newDir === 0) || (dir === 3 && newDir === 2)) {
+                mirrorType = '\\';
             }
+
+            grid[curY][curX] = mirrorType;
+            dir = newDir;
+            mirrorsPlaced++;
         } else {
-            // Đổi hướng ngẫu nhiên nếu bị kẹt mép bàn cờ
-            dir = (dir + 1) % 4;
+            dir = (dir + 1) % 4; // Đổi hướng tìm đường khác
         }
     }
 
-    // Đặt ô Mục tiêu 'T' ở ô tiếp theo theo hướng đi hiện tại
-    let targetX = Math.min(Math.max(curX + DX[dir], 0), GRID_SIZE - 1);
-    let targetY = Math.min(Math.max(curY + DY[dir], 0), GRID_SIZE - 1);
+    // Đặt Mục tiêu 'T' ĐÚNG trên đường đi tiếp theo của laser
+    let targetX = curX + DX[dir];
+    let targetY = curY + DY[dir];
 
-    // Nếu bị trùng với ô gương hoặc ô L, tìm ô trống gần nhất làm Target
-    if (grid[targetY][targetX] !== 'E') {
-        outer: for (let r = GRID_SIZE - 1; r >= 0; r--) {
-            for (let c = GRID_SIZE - 1; c >= 0; c--) {
-                if (grid[r][c] === 'E') {
-                    targetX = c;
-                    targetY = r;
-                    break outer;
-                }
-            }
-        }
+    // Kiểm tra nếu out bàn cờ hoặc vướng gương -> đặt ngay tại ô curX, curY (chuyển ô đó thành T)
+    if (targetX < 0 || targetX >= GRID_SIZE || targetY < 0 || targetY >= GRID_SIZE || grid[targetY][targetX] !== 'E') {
+        grid[curY][curX] = 'T';
+    } else {
+        grid[targetY][targetX] = 'T';
     }
-    grid[targetY][targetX] = 'T';
 
-    // Xoay ngẫu nhiên các gương vừa đặt để tạo câu đố cho người chơi giải
+    // Xoay ngẫu nhiên trạng thái ban đầu của các gương để người chơi giải
     for (let r = 0; r < GRID_SIZE; r++) {
         for (let c = 0; c < GRID_SIZE; c++) {
             if (grid[r][c] === '/' || grid[r][c] === '\\') {
@@ -113,7 +93,6 @@ function generateSolvableLevel(id) {
     };
 }
 
-// Khởi tạo danh sách 100 màn chơi tự động
 const LEVELS = Array.from({ length: 100 }, (_, index) => generateSolvableLevel(index + 1));
 
 let currentLevelIndex = 0;
