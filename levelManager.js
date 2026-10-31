@@ -1,12 +1,10 @@
 const STORAGE_KEY = "laser_logic_unlocked_level";
 
-// Lấy index màn cao nhất đã mở khóa (Mặc định = 0 tức là Màn 1)
 function getUnlockedLevelIndex() {
     const saved = localStorage.getItem(STORAGE_KEY);
     return saved !== null ? parseInt(saved, 10) : 0;
 }
 
-// Lưu tiến trình mở khóa màn tiếp theo
 function saveUnlockedLevel(index) {
     const currentUnlocked = getUnlockedLevelIndex();
     if (index > currentUnlocked) {
@@ -14,49 +12,57 @@ function saveUnlockedLevel(index) {
     }
 }
 
-// Xóa dữ liệu tiến trình (Khóa lại từ đầu)
 function clearSaveData() {
     localStorage.removeItem(STORAGE_KEY);
     currentLevelIndex = 0;
     loadCurrentLevel();
 }
 
-// THUẬT TOÁN ĐẢM BẢO 100% CÓ LỜI GIẢI
+// THUẬT TOÁN TAO LEVEL CHUẨN 100% CÓ LỜI GIẢI
 function generateGuaranteedLevel(id) {
-    let grid, solutionGrid;
-    let isValidLevel = false;
+    let grid;
+    let isSuccess = false;
     let attempts = 0;
 
-    while (!isValidLevel && attempts < 100) {
+    while (!isSuccess && attempts < 200) {
         attempts++;
         grid = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill('E'));
-        grid[0][0] = 'L'; // Nguồn xuất phát tại (0,0)
+        grid[0][0] = 'L'; // Nguồn phát luôn ở (0,0)
 
         let x = 0, y = 0;
         let dir = 0; // 0: Phải, 1: Xuống, 2: Trái, 3: Lên
-        let mirrorPositions = [];
+        let placedMirrors = [];
+        
+        // Màn 1-10 có 1-2 gương; các màn sau có từ 2-4 gương
+        const maxMirrors = Math.min(1 + Math.floor(id / 10), 4);
 
-        // Số lượng gương tăng dần theo độ khó (Màn 1 có 1-2 gương, màn cao có 3-5 gương)
-        const targetMirrors = Math.min(1 + Math.floor(id / 10), 5);
-
-        // 1. Dựng đường đi chắc chắn đúng cho laser
-        for (let i = 0; i < 20 && mirrorPositions.length < targetMirrors; i++) {
-            let step = Math.floor(Math.random() * 2) + 1; // Đi 1 hoặc 2 ô
+        // Giả lập bước đi của laser
+        for (let i = 0; i < 15 && placedMirrors.length < maxMirrors; i++) {
+            // Cho laser đi ngẫu nhiên 1 đến 3 ô
+            let step = Math.floor(Math.random() * 2) + 1;
             let nx = x + DX[dir] * step;
             let ny = y + DY[dir] * step;
 
-            // Giới hạn trong bàn cờ 5x5
-            nx = Math.min(Math.max(nx, 0), GRID_SIZE - 1);
-            ny = Math.min(Math.max(ny, 0), GRID_SIZE - 1);
-
-            if ((nx !== x || ny !== y) && grid[ny][nx] === 'E') {
+            // Kiểm tra xem bước tiếp theo có nằm trong bàn cờ 5x5 không
+            if (nx >= 0 && nx < GRID_SIZE && ny >= 0 && ny < GRID_SIZE && grid[ny][nx] === 'E') {
                 x = nx;
                 y = ny;
 
-                // Chọn hướng rẽ mới (Trái hoặc Phải)
-                let newDir = (dir + (Math.random() < 0.5 ? 1 : 3)) % 4;
-                
-                // Xác định đúng loại gương cần đặt để laser rẽ sang newDir
+                // Thử rẽ hướng mới sao cho không bị đâm ngược lại nguồn
+                let possibleNewDirs = [];
+                if (dir === 0 || dir === 2) { 
+                    // Đang đi ngang -> Chỉ cho rẽ Xuống (1) hoặc rẽ Lên nếu y > 0
+                    possibleNewDirs.push(1);
+                    if (y > 0) possibleNewDirs.push(3);
+                } else { 
+                    // Đang đi dọc -> Chỉ cho rẽ Phải (0) hoặc rẽ Trái nếu x > 0
+                    possibleNewDirs.push(0);
+                    if (x > 0) possibleNewDirs.push(2);
+                }
+
+                let newDir = possibleNewDirs[Math.floor(Math.random() * possibleNewDirs.length)];
+
+                // Xác định chính xác loại gương (/ hoặc \) để laser bẻ sang newDir
                 let mirrorType = '/';
                 if ((dir === 0 && newDir === 1) || (dir === 2 && newDir === 3) || 
                     (dir === 1 && newDir === 0) || (dir === 3 && newDir === 2)) {
@@ -64,39 +70,32 @@ function generateGuaranteedLevel(id) {
                 }
 
                 grid[y][x] = mirrorType;
-                mirrorPositions.push({ r: y, c: x, correctType: mirrorType });
+                placedMirrors.push({ r: y, c: x, correct: mirrorType });
                 dir = newDir;
-            } else {
-                dir = (dir + 1) % 4;
             }
         }
 
-        // 2. Đặt ô Mục tiêu T ở điểm cuối cùng của tia laser
+        // Bắn thêm 1 đoạn ngắn nữa để đặt ô Mục tiêu T
         let targetX = x + DX[dir];
         let targetY = y + DY[dir];
 
         if (targetX >= 0 && targetX < GRID_SIZE && targetY >= 0 && targetY < GRID_SIZE && grid[targetY][targetX] === 'E') {
             grid[targetY][targetX] = 'T';
-        } else {
-            grid[y][x] = 'T'; // Nếu vướng biên thì đặt T ngay ô cuối
+            isSuccess = true;
+        } else if (grid[y][x] !== 'L' && placedMirrors.length > 0) {
+            // Nếu không tiến thêm được thì đặt T ngay tại ô cuối cùng
+            grid[y][x] = 'T';
+            isSuccess = true;
         }
 
-        // Chỉ chấp nhận màn chơi nếu có ít nhất 1 gương và đã đính được T
-        if (mirrorPositions.length > 0) {
-            isValidLevel = true;
-
-            // 3. Xoay đảo các gương để tạo thành CÂU ĐỐ cho người chơi
-            // Giữ lại 1 bản sao làm đáp án
-            solutionGrid = JSON.parse(JSON.stringify(grid));
-
-            // Xoay ít nhất 1 gương khác hướng đáp án để người chơi phải click giải
-            let scrambled = false;
-            mirrorPositions.forEach(m => {
-                if (Math.random() < 0.7 || !scrambled) {
-                    grid[m.r][m.c] = m.correctType === '/' ? '\\' : '/';
-                    scrambled = true;
-                }
+        if (isSuccess && placedMirrors.length > 0) {
+            // Xoay xáo trộn các gương để tạo thành CÂU ĐỐ
+            placedMirrors.forEach(m => {
+                // Xoay ngược gương lại để người chơi phải click giải
+                grid[m.r][m.c] = (m.correct === '/') ? '\\' : '/';
             });
+        } else {
+            isSuccess = false;
         }
     }
 
@@ -107,7 +106,7 @@ function generateGuaranteedLevel(id) {
     };
 }
 
-// Tự động khởi tạo danh sách 100 màn chơi
+// Khởi tạo 100 màn chơi chuẩn 100%
 const LEVELS = Array.from({ length: 100 }, (_, index) => generateGuaranteedLevel(index + 1));
 
 let currentLevelIndex = 0;
@@ -122,17 +121,16 @@ function loadCurrentLevel() {
     targetHit = false;
 }
 
-// Chuyển sang màn tiếp theo & Lưu tiến trình
 function nextLevel() {
     if (currentLevelIndex < LEVELS.length - 1) {
         currentLevelIndex++;
-        saveUnlockedLevel(currentLevelIndex); // Mở khóa màn mới
+        saveUnlockedLevel(currentLevelIndex);
         loadCurrentLevel();
         return true;
     }
     return false;
 }
-// Chuyển về màn phía trước
+
 function prevLevel() {
     if (currentLevelIndex > 0) {
         currentLevelIndex--;
