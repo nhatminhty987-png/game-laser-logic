@@ -92,18 +92,21 @@ function draw() {
                 let targetCell = laserWaypoints[laserWaypoints.length - 1];
                 createConfetti(targetCell.x, targetCell.y, 80);
                 
-                // Mở khóa màn tiếp theo khi thắng
+                // 1. Lưu mở khóa màn tiếp theo
                 saveUnlockedLevel(currentLevelIndex + 1);
+                
+                // 2. KIỂM TRA: Nếu vừa thắng màn cuối cùng hiện có -> Gọi AI tạo thêm 10 màn mới!
+                if (currentLevelIndex === LEVELS.length - 1) {
+                    generateMoreLevels(10);
+                }
+                
+                // 3. Cập nhật lại giao diện danh sách màn chơi
                 initLevelDropdown();
             }
 
             ctx.fillStyle = '#a6e3a1';
             ctx.font = 'bold 22px sans-serif';
-            if (currentLevelIndex === LEVELS.length - 1) {
-                ctx.fillText("XONG TOÀN BỘ GAME!", 80, 35);
-            } else {
-                ctx.fillText("THẮNG! Bấm ▶ để sang màn", 60, 35);
-            }
+            ctx.fillText("THẮNG! Bấm ▶ để sang màn tiếp theo", 40, 35);
         }
         
         if (particles.length > 0) {
